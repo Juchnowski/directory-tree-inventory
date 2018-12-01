@@ -1,11 +1,13 @@
 # created: 2018-12-01
+# input: argv[1] is the root directory name to start the inventory
+# outputs a .jsonl string containing a json line for each file's metadata
 
+# goal: be FAST!!!
+
+import json
 import os
 import sys
 from collections import Counter
-
-basename_counter = Counter()
-extension_counter = Counter()
 
 # run with python >= 3.5 to get os.walk to use the MUCH faster os.scandir function
 assert float(sys.version[:3]) >= 3.5
@@ -25,10 +27,19 @@ for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
         canonical_dirpath = canonical_dirpath[1:]
         assert canonical_dirpath[0] != '/'
 
-    for f in filenames:
-        base, ext = os.path.splitext(f)
-        basename_counter[base] += 1
-        extension_counter[ext] += 1
+    with os.scandir(dirpath) as it:
+        for entry in it:
+            if entry.is_file():
+                s = entry.stat()
+                modtime = s.st_mtime # last modification timestamp
+                filesize = s.st_size # how large is this file?
+
+                base, ext = os.path.splitext(entry.name)
+                #basename_counter[base] += 1
+                #extension_counter[ext] += 1
+
+                data = dict(dir=canonical_dirpath, file=entry.name, ext=ext, modtime=modtime, size=filesize)
+                print(json.dumps(data))
 
     # from https://docs.python.org/3/library/os.html#os.walk
     # When topdown is True, the caller can modify the dirnames list
@@ -40,5 +51,3 @@ for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
             dirnames.remove(d)
         except ValueError:
             pass
-
-print(extension_counter.most_common(100))
