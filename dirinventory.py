@@ -1,23 +1,33 @@
 # created: 2018-12-01
 # input: argv[1] is the root directory name to start the inventory
+#        argv[2] is your computer's name (or whatever you want to put in here!)
 # outputs a .jsonl string containing a json line for each file's metadata
+# (the first line represents JSON metadata)
 
 # goal: be FAST!!!
 
 import json
 import os
 import sys
+import time
 from collections import Counter
 
 # run with python >= 3.5 to get os.walk to use the MUCH faster os.scandir function
 assert float(sys.version[:3]) >= 3.5
 
 # which directories NOT to recurse into
-# .ptvs is python tools for visual studio
+# (.ptvs is python tools for visual studio)
 IGNORE_DIRS = ('.git', '.ptvs', 'node_modules')
 
 rootdir = sys.argv[1]
 assert os.path.isdir(rootdir)
+
+machine_name = sys.argv[2]
+
+# first line metadata
+metadata = dict(ts=time.time(), IGNORE_DIRS=IGNORE_DIRS, machine=machine_name)
+print(json.dumps(metadata))
+
 
 for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
     # canonicalize dirpath relative to rootdir
