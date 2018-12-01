@@ -38,7 +38,8 @@ for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
                 #basename_counter[base] += 1
                 #extension_counter[ext] += 1
 
-                data = dict(dir=canonical_dirpath, file=entry.name, ext=ext, modtime=modtime, size=filesize)
+                # use short key names to save space :0
+                data = dict(d=canonical_dirpath, f=entry.name, e=ext, mt=modtime, sz=filesize)
                 print(json.dumps(data))
 
     # from https://docs.python.org/3/library/os.html#os.walk
