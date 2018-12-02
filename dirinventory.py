@@ -17,7 +17,8 @@ assert float(sys.version[:3]) >= 3.5
 
 # which directories NOT to recurse into
 # (.ptvs is python tools for visual studio)
-IGNORE_DIRS = ('.git', '.ptvs', 'node_modules')
+#IGNORE_DIRS = ('.git', '.ptvs', 'node_modules')
+IGNORE_DIRS = ()
 
 rootdir = sys.argv[1]
 assert os.path.isdir(rootdir)
@@ -25,9 +26,12 @@ assert os.path.isdir(rootdir)
 machine_name = sys.argv[2]
 
 # first line metadata
-metadata = dict(ts=time.time(), IGNORE_DIRS=IGNORE_DIRS, machine=machine_name)
+metadata = dict(ts=time.time(), IGNORE_DIRS=IGNORE_DIRS, machine=machine_name, rootdir=os.path.abspath(rootdir))
 print(json.dumps(metadata))
 
+basename_counter = Counter()
+extension_counter = Counter()
+dirnames_counter = Counter()
 
 for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
     # canonicalize dirpath relative to rootdir
@@ -36,6 +40,8 @@ for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
     if canonical_dirpath and canonical_dirpath[0] == '/':
         canonical_dirpath = canonical_dirpath[1:]
         assert canonical_dirpath[0] != '/'
+
+    #dirnames_counter[os.path.basename(canonical_dirpath)] += 1
 
     with os.scandir(dirpath) as it:
         for entry in it:
@@ -62,3 +68,9 @@ for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
             dirnames.remove(d)
         except ValueError:
             pass
+
+#print(dirnames_counter.most_common(100))
+#print()
+#print(basename_counter.most_common(100))
+#print()
+#print(extension_counter.most_common(100))
