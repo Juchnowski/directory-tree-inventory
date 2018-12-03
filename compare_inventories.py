@@ -71,11 +71,37 @@ def parse_inventory_file(filename):
 
 
 # compare inventories produced by parse_inventory_file
-def compare_inventories(first, second):
+# you can pass in optional directories, filenames, and file extensions to ignore
+def compare_inventories(first, second,
+                        ignore_dirs=[], ignore_filenames=[], ignore_exts=[]):
     print('First: ', first['metadata'])
     print('Second:', second['metadata'])
     print('---')
-    print('TODO: compare me!!!')
+
+    first_rbp = first['records_by_path']
+    second_rbp = second['records_by_path']
+
+    first_rbp_keys = set(first_rbp.keys())
+    second_rbp_keys = set(second_rbp.keys())
+
+    in_first_but_not_second = first_rbp_keys.difference(second_rbp_keys)
+    in_second_but_not_first = second_rbp_keys.difference(first_rbp_keys)
+    in_both = first_rbp_keys.intersection(second_rbp_keys)
+    print(len(first_rbp_keys), len(second_rbp_keys))
+    print(len(in_first_but_not_second), len(in_second_but_not_first), len(in_both))
+
+    # for files in both first and second, compare their metadata
+    for e in in_both:
+        first_data = first_rbp[e]
+        second_data = second_rbp[e]
+        if first_data['mt'] != second_data['mt']:
+            print(e, 'modtimes differ')
+        if first_data['sz'] != second_data['sz']:
+            print(e, 'sizes differ')
+
+
+    # TODO: for files in_first_but_not_second and in_second_but_not_first,
+    # use heuristics to determine whether those files have been MOVED
 
 
 if __name__ == '__main__':
