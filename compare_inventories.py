@@ -73,7 +73,14 @@ def parse_inventory_file(filename):
 # compare inventories produced by parse_inventory_file
 # you can pass in optional directories, filenames, and file extensions to ignore
 def compare_inventories(first, second,
-                        ignore_dirs=[], ignore_filenames=[], ignore_exts=[]):
+                        # include slashes to prevent spurious substring matches
+                        ignore_dirs=['directory-tree-inventory/inventory-files_do-not-add-to-git',
+                                     '/.git',
+                                     '/node_modules'],
+                        ignore_filenames=['.DS_Store'],
+                        ignore_exts=[]):
+    print(f'ignore_dirs: {ignore_dirs}\nignore_filenames: {ignore_filenames}\nignore_exts: {ignore_exts}')
+    print('---')
     print('First: ', first['metadata'])
     print('Second:', second['metadata'])
     print('---')
@@ -94,10 +101,24 @@ def compare_inventories(first, second,
     for e in in_both:
         first_data = first_rbp[e]
         second_data = second_rbp[e]
-        if first_data['mt'] != second_data['mt']:
-            print(e, 'modtimes differ')
+
+        skip_me = False
+        if e[1] in ignore_filenames:
+            skip_me = True
+
+        for d in ignore_dirs:
+            if d in e[0]:
+                skip_me = True
+
+        if skip_me: continue
+
+        # use a heuristic for 'close enough' in terms of modtimes
+        # (within a minute)
+        if abs(first_data['mt'] - second_data['mt']) > 60:
+            print(e, f"modtimes differ by {round(abs(first_data['mt'] - second_data['mt']))} seconds")
+
         if first_data['sz'] != second_data['sz']:
-            print(e, 'sizes differ')
+            print(e, 'sizes differ:', first_data['sz'], second_data['sz'])
 
 
     # TODO: for files in_first_but_not_second and in_second_but_not_first,
