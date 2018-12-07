@@ -159,17 +159,18 @@ def compare_inventories(first, second,
             print(e, 'sizes differ:', first_data['sz'], second_data['sz'])
 
 
-    # TODO: for files in_first_but_not_second and in_second_but_not_first,
-    # use heuristics to determine whether those files have been MOVED
     print('---\nTODO: use heuristics like file size to see if those files were MOVED')
+    first_rbs = first['records_by_filesize']
+    second_rbs = second['records_by_filesize']
+
     print('\nonly in first ...')
     for e in sorted(in_first_but_not_second):
         if not should_ignore(e):
-            print(e)
-    print('\nonly in second ...')
+            print(e, first_rbp[e], second_rbs[first_rbp[e]['sz']])
+    print('\n\nonly in second ...')
     for e in sorted(in_second_but_not_first):
         if not should_ignore(e):
-            print(e)
+            print(e, second_rbp[e], first_rbs[second_rbp[e]['sz']])
 
 
 if __name__ == '__main__':
