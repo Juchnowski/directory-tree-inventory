@@ -6,6 +6,7 @@
 ''' to test, run something like:
 
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-mba.jsonl inventory-files_do-not-add-to-git/2018-12-03-mba.jsonl > /tmp/out
+python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl > /tmp/out
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-15-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl
 
 
@@ -125,13 +126,14 @@ def create_dirtree(files_lst):
 # dt: created by create_dirtree
 def pretty_print_dirtree(dt):
     def print_helper(cur_entry, level):
-        prefix = ('  ' * level)
-        prefix_plus_one = ('  ' * (level+1))
-        print(prefix + cur_entry['dirname'] + '/') # trailing '/' for cleanliness
+        prefix = ('    ' * level)
+        prefix_plus_one = ('    ' * (level+1))
+        print(prefix + '/' + cur_entry['dirname']) # leading '/' for readability
         for f in cur_entry['files']:
             auxiliary_keys = [e for e in f.keys() if e not in ('fn', 'dirs')]
             aux_dict = dict([(e,f[e]) for e in auxiliary_keys])
-            print(f'{prefix_plus_one}{f["fn"]} ({aux_dict})')
+            print(f'{prefix_plus_one}{f["fn"]}    {aux_dict}')
+        #if len(cur_entry['files']) > 0 and len(cur_entry['subdirs']) > 0: print()
         for k in sorted(cur_entry['subdirs'].keys()):
             print_helper(cur_entry['subdirs'][k], level+1)
 
