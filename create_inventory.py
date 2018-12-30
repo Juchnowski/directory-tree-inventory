@@ -10,6 +10,7 @@ TODOs
   inventory file
 - allow for direct comparisons of two directory trees without writing to
   an inventory file
+- store consecutive inventory files as diffs to save space (optimization)
 '''
 
 import argparse
