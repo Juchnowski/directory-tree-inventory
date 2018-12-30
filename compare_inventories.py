@@ -6,9 +6,27 @@
 ''' to test, run something like:
 
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-mba.jsonl inventory-files_do-not-add-to-git/2018-12-03-mba.jsonl > /tmp/out
-python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-18-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl
+python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-15-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl
+
+
+TODOs:
+- compare today's inventory against the last archived entry, and if you
+  'accept' the changes, then set today as the most recent archive. this
+  way, you can run the script every day interactively as a routine check
+- summarize results for directories with lots of added/deleted files
 
 '''
+
+# include slashes in dirnames to prevent spurious substring matches
+DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
+                       '/.git',
+                       '/node_modules',
+                       '.dropbox.cache/']
+
+DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r']
+
+DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
+
 
 import argparse
 import json
@@ -77,17 +95,6 @@ def parse_inventory_file(filename):
     return ret
 
 
-# include slashes in dirnames to prevent spurious substring matches
-DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
-                       '/.git',
-                       '/node_modules',
-                       '.dropbox.cache/']
-
-DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r']
-
-DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
-
-
 # compare inventories produced by parse_inventory_file
 # you can pass in optional directories, filenames, and file extensions to ignore
 def compare_inventories(first, second,
@@ -150,8 +157,6 @@ def compare_inventories(first, second,
     in_first_but_not_second = first_rbp_keys.difference(second_rbp_keys)
     in_second_but_not_first = second_rbp_keys.difference(first_rbp_keys)
     in_both = first_rbp_keys.intersection(second_rbp_keys)
-    #print(len(first_rbp_keys), len(second_rbp_keys))
-    #print(len(in_first_but_not_second), len(in_second_but_not_first), len(in_both))
 
     changed_files = []
     # for files in both first and second, compare their metadata
