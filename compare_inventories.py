@@ -191,16 +191,14 @@ def compare_inventories(first, second,
     to_print = []
     for e in sorted(in_first_but_not_second):
         if not should_ignore(e):
-            to_print.append('/'.join(e))
-            #print(e) #, first_rbp[e], second_rbs[first_rbp[e]['sz']])
+            to_print.append('/'.join(e) + ' ' + str(first_rbp[e]['sz']))
     for e in sorted(to_print): print(e)
 
     print('\n\nonly in second ...')
     to_print2 = []
     for e in sorted(in_second_but_not_first):
         if not should_ignore(e):
-            to_print2.append('/'.join(e))
-            #print(e) #, second_rbp[e], first_rbs[second_rbp[e]['sz']])
+            to_print2.append('/'.join(e) + ' ' + str(second_rbp[e]['sz']))
     for e in sorted(to_print2): print(e)
 
 
