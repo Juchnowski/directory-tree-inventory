@@ -99,6 +99,29 @@ def parse_inventory_file(filename):
     return ret
 
 
+# create a tree-like structure from a list of files, each one containing
+# a 'dirs' entry which is a list of directory path entries for that file
+def create_dirtree(files_lst):
+    rootdir = dict(files=[],
+                   subdirs={}, # key: name of one subdirectory level, value: its entry
+                   dirname='')
+    for e in files_lst:
+        path_entries = e['dirs']
+        if len(path_entries) == 1 and path_entries[0] == '': # top-level root dir
+            rootdir['files'].append(e)
+        else:
+            cur_entry = rootdir # always start at root
+
+            # traverse down path_entries and create children to the tree
+            # rooted at rootdir as necessary:
+            for p in path_entries:
+                if p not in cur_entry['subdirs']:
+                    cur_entry['subdirs'][p] = dict(dirname=p, files=[], subdirs={})
+                cur_entry = cur_entry['subdirs'][p]
+            cur_entry['files'].append(e)
+    return rootdir
+
+
 # compare inventories produced by parse_inventory_file
 # you can pass in optional directories, filenames, and file extensions to ignore
 def compare_inventories(first, second,
@@ -191,27 +214,9 @@ def compare_inventories(first, second,
             assert len(e) == 2
             changed_files.append(dict(dirs=e[0].split('/'), fn=e[1], modtimes_diff_secs=modtimes_diff_secs, sizes_diff_bytes=sizes_diff_bytes))
 
-    rootdir = dict(files=[],
-                   subdirs={}, # key: name of one subdirectory level, value: its entry
-                   dirname='')
+    changed_tree = create_dirtree(changed_files)
     print('files changed ...')
-    for e in changed_files:
-        path_entries = e['dirs']
-        if len(path_entries) == 1 and path_entries[0] == '': # top-level root dir
-            rootdir['files'].append(e)
-        else:
-            cur_entry = rootdir # always start at root
-
-            # traverse down path_entries and create children to the tree
-            # rooted at rootdir as necessary:
-            for p in path_entries:
-                if p not in cur_entry['subdirs']:
-                    cur_entry['subdirs'][p] = dict(dirname=p, files=[], subdirs={})
-                cur_entry = cur_entry['subdirs'][p]
-            cur_entry['files'].append(e)
-
-    print('@@@@@@')
-    print(json.dumps(rootdir))
+    print(json.dumps(changed_tree))
 
 
     print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
@@ -219,18 +224,22 @@ def compare_inventories(first, second,
     second_rbs = second['records_by_filesize']
 
     print('\nonly in first ...')
-    to_print = []
+    only_first_files = []
     for e in sorted(in_first_but_not_second):
         if not should_ignore(e):
-            to_print.append('/'.join(e) + ' ' + str(first_rbp[e]['sz']))
-    for e in sorted(to_print): print(e)
+            assert len(e) == 2
+            only_first_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=first_rbp[e]['sz'], modtime=first_rbp[e]['mt']))
+    only_first_tree = create_dirtree(only_first_files)
+    print(json.dumps(only_first_tree))
 
     print('\n\nonly in second ...')
-    to_print2 = []
+    only_second_files = []
     for e in sorted(in_second_but_not_first):
         if not should_ignore(e):
-            to_print2.append('/'.join(e) + ' ' + str(second_rbp[e]['sz']))
-    for e in sorted(to_print2): print(e)
+            assert len(e) == 2
+            only_second_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=second_rbp[e]['sz'], modtime=second_rbp[e]['mt']))
+    only_second_tree = create_dirtree(only_second_files)
+    print(json.dumps(only_second_tree))
 
 
 if __name__ == '__main__':
