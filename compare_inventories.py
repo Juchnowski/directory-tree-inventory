@@ -14,6 +14,8 @@ TODOs:
   'accept' the changes, then set today as the most recent archive. this
   way, you can run the script every day interactively as a routine check
 - summarize results for directories with lots of added/deleted files
+- pretty-print diff seconds
+    str(datetime.timedelta(seconds=100000))
 
 '''
 
@@ -23,7 +25,8 @@ DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-g
                        '/node_modules',
                        '.dropbox.cache/']
 
-DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r']
+DEFAULT_IGNORE_FILENAMES = ['.DS_Store']
+#DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r']
 
 DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
 
@@ -38,6 +41,7 @@ from collections import Counter, defaultdict
 
 # requires python >= 3.5 to get os.walk to use the MUCH faster os.scandir function
 assert float(sys.version[:3]) >= 3.5
+
 
 # parses an inventory file created by create_inventory() in create_inventory.py
 # and returns a dict
@@ -168,24 +172,46 @@ def compare_inventories(first, second,
             continue
 
         modtimes_differ = False
+        modtimes_diff_secs = 0
         sizes_differ = False
+        sizes_diff_bytes = 0
 
         # use a heuristic for 'close enough' in terms of modtimes
         # (within a minute)
         if not ignore_modtimes:
-            if abs(first_data['mt'] - second_data['mt']) > 60:
+            modtimes_diff_secs = round(second_data['mt'] - first_data['mt'])
+            if abs(modtimes_diff_secs) > 60:
                 modtimes_differ = True
-                #print('/'.join(e), f"modtimes differ by {round(abs(first_data['mt'] - second_data['mt']))} seconds")
 
         if first_data['sz'] != second_data['sz']:
             sizes_differ = True
-            #print('/'.join(e), 'sizes differ:', first_data['sz'], second_data['sz'])
+            sizes_diff_bytes = second_data['sz'] - first_data['sz']
 
         if modtimes_differ or sizes_differ:
-            changed_files.append('/'.join(e))
+            assert len(e) == 2
+            changed_files.append(dict(dirs=e[0].split('/'), fn=e[1], modtimes_diff_secs=modtimes_diff_secs, sizes_diff_bytes=sizes_diff_bytes))
 
+    rootdir = dict(files=[],
+                   subdirs={}, # key: name of one subdirectory level, value: its entry
+                   dirname='')
     print('files changed ...')
-    for e in sorted(changed_files): print(e)
+    for e in changed_files:
+        path_entries = e['dirs']
+        if len(path_entries) == 1 and path_entries[0] == '': # top-level root dir
+            rootdir['files'].append(e)
+        else:
+            cur_entry = rootdir # always start at root
+
+            # traverse down path_entries and create children to the tree
+            # rooted at rootdir as necessary:
+            for p in path_entries:
+                if p not in cur_entry['subdirs']:
+                    cur_entry['subdirs'][p] = dict(dirname=p, files=[], subdirs={})
+                cur_entry = cur_entry['subdirs'][p]
+            cur_entry['files'].append(e)
+
+    print('@@@@@@')
+    print(json.dumps(rootdir))
 
 
     print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
