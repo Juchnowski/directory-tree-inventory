@@ -122,6 +122,22 @@ def create_dirtree(files_lst):
     return rootdir
 
 
+# dt: created by create_dirtree
+def pretty_print_dirtree(dt):
+    def print_helper(cur_entry, level):
+        prefix = ('  ' * level)
+        prefix_plus_one = ('  ' * (level+1))
+        print(prefix + cur_entry['dirname'] + '/') # trailing '/' for cleanliness
+        for f in cur_entry['files']:
+            auxiliary_keys = [e for e in f.keys() if e not in ('fn', 'dirs')]
+            aux_dict = dict([(e,f[e]) for e in auxiliary_keys])
+            print(f'{prefix_plus_one}{f["fn"]} ({aux_dict})')
+        for k in sorted(cur_entry['subdirs'].keys()):
+            print_helper(cur_entry['subdirs'][k], level+1)
+
+    print_helper(dt, 0)
+
+
 # compare inventories produced by parse_inventory_file
 # you can pass in optional directories, filenames, and file extensions to ignore
 def compare_inventories(first, second,
@@ -212,11 +228,12 @@ def compare_inventories(first, second,
 
         if modtimes_differ or sizes_differ:
             assert len(e) == 2
-            changed_files.append(dict(dirs=e[0].split('/'), fn=e[1], modtimes_diff_secs=modtimes_diff_secs, sizes_diff_bytes=sizes_diff_bytes))
+            changed_files.append(dict(dirs=e[0].split('/'), fn=e[1], diff_secs=modtimes_diff_secs, diff_bytes=sizes_diff_bytes))
 
     changed_tree = create_dirtree(changed_files)
     print('files changed ...')
-    print(json.dumps(changed_tree))
+    #print(json.dumps(changed_tree))
+    pretty_print_dirtree(changed_tree)
 
 
     print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
@@ -230,7 +247,7 @@ def compare_inventories(first, second,
             assert len(e) == 2
             only_first_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=first_rbp[e]['sz'], modtime=first_rbp[e]['mt']))
     only_first_tree = create_dirtree(only_first_files)
-    print(json.dumps(only_first_tree))
+    pretty_print_dirtree(only_first_tree)
 
     print('\n\nonly in second ...')
     only_second_files = []
@@ -239,7 +256,7 @@ def compare_inventories(first, second,
             assert len(e) == 2
             only_second_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=second_rbp[e]['sz'], modtime=second_rbp[e]['mt']))
     only_second_tree = create_dirtree(only_second_files)
-    print(json.dumps(only_second_tree))
+    pretty_print_dirtree(only_second_tree)
 
 
 if __name__ == '__main__':
