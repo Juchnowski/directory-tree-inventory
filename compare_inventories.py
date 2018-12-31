@@ -26,10 +26,12 @@ DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-g
                        '/node_modules',
                        '.dropbox.cache/']
 
-DEFAULT_IGNORE_FILENAMES = ['.DS_Store']
-#DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r']
+DEFAULT_IGNORE_FILENAMES = ['.DS_Store'] # just for testing
+#DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # uncomment after you're done testing
 
 DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
+
+DEFAULT_SUMMARY_THRESHOLD = 10
 
 
 import argparse
@@ -124,16 +126,19 @@ def create_dirtree(files_lst):
 
 
 # dt: created by create_dirtree
-def pretty_print_dirtree(dt):
+def pretty_print_dirtree(dt, summary_threshold):
     def print_helper(cur_entry, level):
         prefix = ('    ' * level)
         prefix_plus_one = ('    ' * (level+1))
         print(prefix + '/' + cur_entry['dirname']) # leading '/' for readability
-        for f in cur_entry['files']:
-            auxiliary_keys = [e for e in f.keys() if e not in ('fn', 'dirs')]
-            aux_dict = dict([(e,f[e]) for e in auxiliary_keys])
-            print(f'{prefix_plus_one}{f["fn"]}    {aux_dict}')
-        #if len(cur_entry['files']) > 0 and len(cur_entry['subdirs']) > 0: print()
+        n_files = len(cur_entry['files'])
+        if n_files > summary_threshold:
+            print(f'{prefix_plus_one}{n_files} files (--summary_threshold={summary_threshold})')
+        else:
+            for f in cur_entry['files']:
+                auxiliary_keys = [e for e in f.keys() if e not in ('fn', 'dirs')]
+                aux_dict = dict([(e,f[e]) for e in auxiliary_keys])
+                print(f'{prefix_plus_one}{f["fn"]}    {aux_dict}')
         for k in sorted(cur_entry['subdirs'].keys()):
             print_helper(cur_entry['subdirs'][k], level+1)
 
@@ -141,8 +146,8 @@ def pretty_print_dirtree(dt):
 
 
 # compare inventories produced by parse_inventory_file
-# you can pass in optional directories, filenames, and file extensions to ignore
-def compare_inventories(first, second,
+# you can pass in optional paths to ignore
+def compare_inventories(first, second, summary_threshold,
                         ignore_modtimes=False,
                         ignore_dirs=[],
                         ignore_filenames=[],
@@ -235,7 +240,7 @@ def compare_inventories(first, second,
     changed_tree = create_dirtree(changed_files)
     print('files changed ...')
     #print(json.dumps(changed_tree))
-    pretty_print_dirtree(changed_tree)
+    pretty_print_dirtree(changed_tree, summary_threshold)
 
 
     print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
@@ -249,7 +254,7 @@ def compare_inventories(first, second,
             assert len(e) == 2
             only_first_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=first_rbp[e]['sz'], modtime=first_rbp[e]['mt']))
     only_first_tree = create_dirtree(only_first_files)
-    pretty_print_dirtree(only_first_tree)
+    pretty_print_dirtree(only_first_tree, summary_threshold)
 
     print('\n\nonly in second ...')
     only_second_files = []
@@ -258,7 +263,7 @@ def compare_inventories(first, second,
             assert len(e) == 2
             only_second_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=second_rbp[e]['sz'], modtime=second_rbp[e]['mt']))
     only_second_tree = create_dirtree(only_second_files)
-    pretty_print_dirtree(only_second_tree)
+    pretty_print_dirtree(only_second_tree, summary_threshold)
 
 
 if __name__ == '__main__':
@@ -272,11 +277,13 @@ if __name__ == '__main__':
     parser.add_argument("--ignore_files", nargs='+', help="ignore the following filenames: <list>")
     parser.add_argument("--ignore_exts", nargs='+', help="ignore the following file extensions: <list>")
     parser.add_argument("--ignore_direxts", nargs='+', help="ignore the following file extensions within directories: <list> of entries, each being 'dirname,extension'")
+    parser.add_argument("--summary_threshold", action='store', help="summarize a directory when it has more than N files")
 
     args = parser.parse_args()
     first = parse_inventory_file(args.first_file)
     second = parse_inventory_file(args.second_file)
     compare_inventories(first, second,
+                        int(args.summary_threshold) if args.summary_threshold else DEFAULT_SUMMARY_THRESHOLD, # argh!!!
                         args.ignore_modtimes,
                         args.ignore_dirs, args.ignore_files,
                         args.ignore_exts, args.ignore_direxts)
