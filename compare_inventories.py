@@ -7,17 +7,7 @@
 
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-mba.jsonl inventory-files_do-not-add-to-git/2018-12-03-mba.jsonl > /tmp/out
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl > /tmp/out
-python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-15-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl
-
-
-TODOs:
-- compare today's inventory against the last archived entry, and if you
-  'accept' the changes, then set today as the most recent archive. this
-  way, you can run the script every day interactively as a routine check
-- summarize results for directories with lots of added/deleted files
-- pretty-print diff seconds
-    str(datetime.timedelta(seconds=100000))
-
+python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-15-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl > /tmp/out
 '''
 
 # include slashes in dirnames to prevent spurious substring matches
@@ -26,8 +16,7 @@ DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-g
                        '/node_modules',
                        '.dropbox.cache/']
 
-DEFAULT_IGNORE_FILENAMES = ['.DS_Store'] # just for testing
-#DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # uncomment after you're done testing
+DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
 
 DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
 
@@ -39,7 +28,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+import datetime
 from collections import Counter, defaultdict
 
 # requires python >= 3.5 to get os.walk to use the MUCH faster os.scandir function
@@ -86,7 +75,7 @@ def parse_inventory_file(filename):
         records_by_filesize[filesize].append(record)
 
     # clean up metadata
-    metadata['dt'] = datetime.utcfromtimestamp(metadata['ts']).strftime('%Y-%m-%d %H:%M:%S UTC')
+    metadata['dt'] = datetime.datetime.utcfromtimestamp(metadata['ts']).strftime('%Y-%m-%d %H:%M:%S UTC')
     del metadata['ts']
     if not metadata['ignore_dirs']:
         del metadata['ignore_dirs']
@@ -126,19 +115,17 @@ def create_dirtree(files_lst):
 
 
 # dt: created by create_dirtree
-def pretty_print_dirtree(dt, summary_threshold):
+def pretty_print_dirtree(dt, summary_threshold, aux_dict_repr):
     def print_helper(cur_entry, level):
         prefix = ('    ' * level)
         prefix_plus_one = ('    ' * (level+1))
         print(prefix + '/' + cur_entry['dirname']) # leading '/' for readability
         n_files = len(cur_entry['files'])
         if n_files > summary_threshold:
-            print(f'{prefix_plus_one}{n_files} files (--summary_threshold={summary_threshold})')
+            print(f'{prefix_plus_one}[{n_files} files]')
         else:
             for f in cur_entry['files']:
-                auxiliary_keys = [e for e in f.keys() if e not in ('fn', 'dirs')]
-                aux_dict = dict([(e,f[e]) for e in auxiliary_keys])
-                print(f'{prefix_plus_one}{f["fn"]}    {aux_dict}')
+                print(f'{prefix_plus_one}{f["fn"]}    {aux_dict_repr(f)}')
         for k in sorted(cur_entry['subdirs'].keys()):
             print_helper(cur_entry['subdirs'][k], level+1)
 
@@ -192,7 +179,7 @@ def compare_inventories(first, second, summary_threshold,
         return False
 
 
-    print(f'ignore_dirs: {ignore_dirs}\nignore_filenames: {ignore_filenames}\nignore_exts: {ignore_exts}\nignore_direxts: {ignore_direxts}')
+    print(f'ignore_dirs: {ignore_dirs}\nignore_filenames: {ignore_filenames}\nignore_exts: {ignore_exts}\nignore_direxts: {ignore_direxts}\nsummary_threshold: {summary_threshold}')
     print('---')
     print('First: ', first['metadata'])
     print('Second:', second['metadata'])
@@ -240,8 +227,22 @@ def compare_inventories(first, second, summary_threshold,
     changed_tree = create_dirtree(changed_files)
     print('files changed ...')
     #print(json.dumps(changed_tree))
-    pretty_print_dirtree(changed_tree, summary_threshold)
 
+    def changed_repr(f):
+        delta_bytes = None
+        if f["diff_bytes"] > 0:
+            delta_bytes = f'+{f["diff_bytes"]} bytes'
+        elif f["diff_bytes"] < 0:
+            delta_bytes = f'{f["diff_bytes"]} bytes'
+        else:
+            delta_bytes = 'NO SIZE CHANGE'
+        return f'({str(datetime.timedelta(seconds=f["diff_secs"]))}, {delta_bytes})'
+
+    pretty_print_dirtree(changed_tree, summary_threshold, changed_repr)
+
+
+    def plain_repr(f):
+        return f'({f["size"]} bytes, modtime: {int(f["modtime"])})'
 
     print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
     first_rbs = first['records_by_filesize']
@@ -254,7 +255,7 @@ def compare_inventories(first, second, summary_threshold,
             assert len(e) == 2
             only_first_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=first_rbp[e]['sz'], modtime=first_rbp[e]['mt']))
     only_first_tree = create_dirtree(only_first_files)
-    pretty_print_dirtree(only_first_tree, summary_threshold)
+    pretty_print_dirtree(only_first_tree, summary_threshold, plain_repr)
 
     print('\n\nonly in second ...')
     only_second_files = []
@@ -263,7 +264,7 @@ def compare_inventories(first, second, summary_threshold,
             assert len(e) == 2
             only_second_files.append(dict(dirs=e[0].split('/'), fn=e[1], size=second_rbp[e]['sz'], modtime=second_rbp[e]['mt']))
     only_second_tree = create_dirtree(only_second_files)
-    pretty_print_dirtree(only_second_tree, summary_threshold)
+    pretty_print_dirtree(only_second_tree, summary_threshold, plain_repr)
 
 
 if __name__ == '__main__':

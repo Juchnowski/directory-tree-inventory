@@ -10,6 +10,9 @@ TODOs
   inventory file
 - allow for direct comparisons of two directory trees without writing to
   an inventory file
+- compare today's inventory against the last archived entry, and if you
+  'accept' the changes, then set today as the most recent archive. this
+  way, you can run the script every day interactively as a routine check
 - store consecutive inventory files as diffs to save space (optimization)
 '''
 
