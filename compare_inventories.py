@@ -8,6 +8,9 @@
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-mba.jsonl inventory-files_do-not-add-to-git/2018-12-03-mba.jsonl > /tmp/out
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-01-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl > /tmp/out
 python3 compare_inventories.py inventory-files_do-not-add-to-git/2018-12-15-imac-pro.jsonl inventory-files_do-not-add-to-git/2018-12-29-imac-pro.jsonl > /tmp/out
+
+TODOs:
+- use heuristics like file size and modtimes to see if those files were MOVED
 '''
 
 # include slashes in dirnames to prevent spurious substring matches
@@ -244,7 +247,6 @@ def compare_inventories(first, second, summary_threshold,
     def plain_repr(f):
         return f'({f["size"]} bytes, modtime: {int(f["modtime"])})'
 
-    print('\n---\nTODO: use heuristics like file size to see if those files were MOVED')
     first_rbs = first['records_by_filesize']
     second_rbs = second['records_by_filesize']
 
@@ -257,7 +259,7 @@ def compare_inventories(first, second, summary_threshold,
     only_first_tree = create_dirtree(only_first_files)
     pretty_print_dirtree(only_first_tree, summary_threshold, plain_repr)
 
-    print('\n\nonly in second ...')
+    print('\nonly in second ...')
     only_second_files = []
     for e in sorted(in_second_but_not_first):
         if not should_ignore(e):
