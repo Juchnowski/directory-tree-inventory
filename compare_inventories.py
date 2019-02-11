@@ -223,7 +223,11 @@ def compare_inventories(first, second, summary_threshold,
             sizes_differ = True
             sizes_diff_bytes = second_data['sz'] - first_data['sz']
 
-        if modtimes_differ or sizes_differ:
+        # only report a change if the SIZE differs
+        # (note that there may be false positives ... use a has to be
+        # really sure!!!)
+        #if modtimes_differ or sizes_differ:
+        if sizes_differ:
             assert len(e) == 2
             changed_files.append(dict(dirs=e[0].split('/'), fn=e[1], diff_secs=modtimes_diff_secs, diff_bytes=sizes_diff_bytes))
 

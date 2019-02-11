@@ -14,6 +14,9 @@ TODOs
   'accept' the changes, then set today as the most recent archive. this
   way, you can run the script every day interactively as a routine check
 - store consecutive inventory files as diffs to save space (optimization)
+
+- add a 'slow mode' that takes the md5 (or other) hash of each file's
+  contents, for more accurate diffing at the expense of being slower
 '''
 
 import argparse
@@ -35,7 +38,7 @@ DEFAULT_IGNORE_DIRS = ()
 
 # creates an inventory starting at rootdir and prints .jsonl result to stdout,
 # containing a line for each file's metadata (first line has overall metadata)
-def create_inventory(rootdir, label, ignore_dirs=DEFAULT_IGNORE_DIRS):
+def create_inventory(rootdir, label, case_sensitive, ignore_dirs=DEFAULT_IGNORE_DIRS):
     assert os.path.isdir(rootdir)
 
     # first line metadata
@@ -68,8 +71,10 @@ def create_inventory(rootdir, label, ignore_dirs=DEFAULT_IGNORE_DIRS):
                     #basename_counter[base] += 1
                     #extension_counter[ext] += 1
 
+                    filename = entry.name if case_sensitive else entry.name.lower()
+
                     # use short key names to save space :0
-                    data = dict(d=canonical_dirpath, f=entry.name,
+                    data = dict(d=canonical_dirpath, f=filename,
                                 e=ext, mt=modtime, sz=filesize)
                     print(json.dumps(data))
 
@@ -92,8 +97,11 @@ if __name__ == '__main__':
     parser.add_argument("root", help="root directory to start inventory crawl")
     parser.add_argument("label", help="label name for this inventory")
 
+    #parser.add_argument("--case_sensitive", help="make filename matches case SENSITIVE",
+    #                    action="store_true")
+
     #parser.add_argument("--create", help="create an inventory and write to stdout",
     #                    action="store_true")
 
     args = parser.parse_args()
-    create_inventory(args.root, args.label)
+    create_inventory(args.root, args.label, case_sensitive=True)
