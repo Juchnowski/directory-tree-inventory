@@ -17,6 +17,8 @@ TODOs
 
 - add a 'slow mode' that takes the md5 (or other) hash of each file's
   contents, for more accurate diffing at the expense of being slower
+  - to make this not as slow, read in only the first N bytes and take a
+    super fast hash of it (crc32?)
 '''
 
 import argparse

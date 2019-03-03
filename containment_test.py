@@ -5,7 +5,14 @@
 
 ''' to test, run something like:
 
-python3 containment_test.py inventory-files_do-not-add-to-git/2019-02-10-imac-pro-old-backup-archives.jsonl inventory-files_do-not-add-to-git/2019-02-10-imac-pro-dropbox.jsonl
+python3 containment_test.py inventory-files_do-not-add-to-git/2019-03-02-imac-pro-old-backup-archives.jsonl inventory-files_do-not-add-to-git/2019-03-02-imac-pro-dropbox.jsonl
+
+NB:
+- there's a lot of old website backups in here that i haven't picked up
+  on, and maybe some old email backups too
+
+TODOs:
+- include a good set of ignores for dirs/files
 '''
 
 # include slashes in dirnames to prevent spurious substring matches
@@ -14,7 +21,7 @@ DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-g
                        '/node_modules',
                        '.dropbox.cache/']
 
-DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
+DEFAULT_IGNORE_FILENAMES = ['Thumbs.db', 'thumbs.db', '.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
 
 DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
 
