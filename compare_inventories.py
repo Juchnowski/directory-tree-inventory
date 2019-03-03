@@ -17,7 +17,7 @@ TODOs:
 DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
                        '/.git',
                        '/node_modules',
-                       '.dropbox.cache']
+                       '/.dropbox.cache']
 
 DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
 
@@ -55,6 +55,9 @@ def parse_inventory_file(filename):
     # key: file size, value: list of records with this file size
     records_by_filesize = defaultdict(list)
 
+    # key: crc32 hash value, value: list of records with this hash
+    records_by_crc32 = defaultdict(list)
+
     n_records = 0
     for line in open(filename):
         record = json.loads(line)
@@ -77,6 +80,12 @@ def parse_inventory_file(filename):
         records_by_modtime[modtime].append(record)
         records_by_filesize[filesize].append(record)
 
+        try:
+            crc32_val = record['crc32']
+            records_by_crc32[crc32_val].append(record)
+        except KeyError:
+            pass
+
     # clean up metadata
     metadata['dt'] = datetime.datetime.utcfromtimestamp(metadata['ts']).strftime('%Y-%m-%d %H:%M:%S UTC')
     del metadata['ts']
@@ -87,6 +96,8 @@ def parse_inventory_file(filename):
     ret['records_by_path'] = records_by_path
     ret['records_by_modtime'] = records_by_modtime
     ret['records_by_filesize'] = records_by_filesize
+    if records_by_crc32:
+        ret['records_by_crc32'] = records_by_crc32
 
     assert len(records_by_path) == n_records
     assert sum(len(e) for e in records_by_modtime.values()) == n_records

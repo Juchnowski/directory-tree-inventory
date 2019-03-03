@@ -3,27 +3,13 @@
 
 # goal: be FAST!!!
 
-''' to test, run something like:
-
-python3 containment_test.py inventory-files_do-not-add-to-git/2019-03-02-imac-pro-old-backup-archives.jsonl inventory-files_do-not-add-to-git/2019-03-02-imac-pro-dropbox.jsonl
-
-NB:
-- there's a lot of old website backups in here that i haven't picked up
-  on, and maybe some old email backups too
-
-TODOs:
-- include a good set of ignores for dirs/files
-'''
-
 # include slashes in dirnames to prevent spurious substring matches
-DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
-                       '/.git',
-                       '/node_modules',
-                       '.dropbox.cache/']
+IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
+               '/.git',
+               '/node_modules',
+               '/.dropbox.cache']
 
-DEFAULT_IGNORE_FILENAMES = ['Thumbs.db', 'thumbs.db', '.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
-
-DEFAULT_IGNORE_DIREXTS = ['pgbovine,.htm', 'pgbovine,.html']
+IGNORE_FILENAMES = ['Thumbs.db', 'thumbs.db', '.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
 
 DEFAULT_SUMMARY_THRESHOLD = 10
 
@@ -44,8 +30,19 @@ def find_needle_in_haystack(needle, haystack):
     needle_rbp = needle['records_by_path']
     haystack_rbp = haystack['records_by_path']
 
-    haystack_file_basenames_to_entries = defaultdict(list)
+    needle_rbcrc = needle['records_by_crc32']
+    haystack_rbcrc = haystack['records_by_crc32']
 
+    # starting in March 2019, use crc32 checksums to do a more accurate search
+    for k, v in needle_rbcrc.items(): # in py3, items() is an iterator
+        if k not in haystack_rbcrc: # can't find this needle's hash in haystack
+            for e in v:
+                if e['f'] not in IGNORE_FILENAMES:
+                    print(e)
+
+    # old path-based algorithm as of Feb 2019
+    '''
+    haystack_file_basenames_to_entries = defaultdict(list)
     for k in haystack_rbp:
         haystack_file_basenames_to_entries[k[-1]].append(haystack_rbp[k])
 
@@ -67,6 +64,7 @@ def find_needle_in_haystack(needle, haystack):
                     print(os.path.join(*k), 'in haystack but DIFFERENT SIZE')
         except KeyError:
             print(os.path.join(*k), 'NOT in haystack')
+    '''
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -74,10 +72,6 @@ if __name__ == '__main__':
     # mandatory positional arguments:
     parser.add_argument("needle_file", help="inventory file to use as the 'needles' to find in haystack")
     parser.add_argument("haystack_file", help="inventory file to use as haystack")
-    parser.add_argument("--ignore_dirs", nargs='+', help="ignore the following directories: <list>")
-    parser.add_argument("--ignore_files", nargs='+', help="ignore the following filenames: <list>")
-    parser.add_argument("--ignore_exts", nargs='+', help="ignore the following file extensions: <list>")
-    parser.add_argument("--ignore_direxts", nargs='+', help="ignore the following file extensions within directories: <list> of entries, each being 'dirname,extension'")
 
     args = parser.parse_args()
     needle = parse_inventory_file(args.needle_file)

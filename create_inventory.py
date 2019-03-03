@@ -40,6 +40,8 @@ DEFAULT_IGNORE_DIRS = ()
 
 # don't read too few bytes, or else lots of files look identical due to
 # their file type headers being the same
+# (NB: it doesn't take much more time to read slightly more bytes,
+# since just opening each file takes a bunch of time)
 N_BYTES_FOR_CHECKSUM = 100
 
 
