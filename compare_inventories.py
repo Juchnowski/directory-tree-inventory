@@ -17,7 +17,7 @@ TODOs:
 DEFAULT_IGNORE_DIRS = ['directory-tree-inventory/inventory-files_do-not-add-to-git',
                        '/.git',
                        '/node_modules',
-                       '.dropbox.cache/']
+                       '.dropbox.cache']
 
 DEFAULT_IGNORE_FILENAMES = ['.DS_Store', 'Icon\r'] # 'Icon\r' doesn't print properly anyhow, #weird
 

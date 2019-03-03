@@ -22,6 +22,7 @@ TODOs
 '''
 
 import argparse
+import binascii
 import json
 import os
 import sys
@@ -37,20 +38,21 @@ assert float(sys.version[:3]) >= 3.5
 #DEFAULT_IGNORE_DIRS = ('.git', '.ptvs', 'node_modules')
 DEFAULT_IGNORE_DIRS = ()
 
+# don't read too few bytes, or else lots of files look identical due to
+# their file type headers being the same
+N_BYTES_FOR_CHECKSUM = 100
+
 
 # creates an inventory starting at rootdir and prints .jsonl result to stdout,
 # containing a line for each file's metadata (first line has overall metadata)
-def create_inventory(rootdir, label, case_sensitive, ignore_dirs=DEFAULT_IGNORE_DIRS):
+def create_inventory(rootdir, label, take_checksum=False, ignore_dirs=DEFAULT_IGNORE_DIRS):
     assert os.path.isdir(rootdir)
 
     # first line metadata
     metadata = dict(ts=time.time(), ignore_dirs=ignore_dirs,
+                    take_checksum=take_checksum, checksum_bytes=N_BYTES_FOR_CHECKSUM,
                     label=label, rootdir=os.path.abspath(rootdir))
     print(json.dumps(metadata))
-
-    #basename_counter = Counter()
-    #extension_counter = Counter()
-    #dirnames_counter = Counter()
 
     for dirpath, dirnames, filenames in os.walk(rootdir, topdown=True):
         # canonicalize dirpath relative to rootdir
@@ -60,8 +62,6 @@ def create_inventory(rootdir, label, case_sensitive, ignore_dirs=DEFAULT_IGNORE_
             canonical_dirpath = canonical_dirpath[1:]
             assert canonical_dirpath[0] != '/'
 
-        #dirnames_counter[os.path.basename(canonical_dirpath)] += 1
-
         with os.scandir(dirpath) as it:
             for entry in it:
                 if entry.is_file():
@@ -70,14 +70,17 @@ def create_inventory(rootdir, label, case_sensitive, ignore_dirs=DEFAULT_IGNORE_
                     filesize = s.st_size # how large is this file?
 
                     base, ext = os.path.splitext(entry.name)
-                    #basename_counter[base] += 1
-                    #extension_counter[ext] += 1
-
-                    filename = entry.name if case_sensitive else entry.name.lower()
-
                     # use short key names to save space :0
-                    data = dict(d=canonical_dirpath, f=filename,
+                    data = dict(d=canonical_dirpath, f=entry.name,
                                 e=ext, mt=modtime, sz=filesize)
+
+                    # do a crude approximation by reading only the first N bytes
+                    if take_checksum:
+                        fullpath = os.path.join(dirpath, entry.name)
+                        with open(fullpath, 'rb') as f:
+                            first_N_bytes = f.read(N_BYTES_FOR_CHECKSUM)
+                            data['crc32'] = binascii.crc32(first_N_bytes)
+
                     print(json.dumps(data))
 
         # from https://docs.python.org/3/library/os.html#os.walk
@@ -98,12 +101,8 @@ if __name__ == '__main__':
     # mandatory positional arguments:
     parser.add_argument("root", help="root directory to start inventory crawl")
     parser.add_argument("label", help="label name for this inventory")
-
-    #parser.add_argument("--case_sensitive", help="make filename matches case SENSITIVE",
-    #                    action="store_true")
-
-    #parser.add_argument("--create", help="create an inventory and write to stdout",
-    #                    action="store_true")
+    parser.add_argument("--checksum", help="take a crc32 checksum of first N bytes of files (SLOW!)",
+                        action="store_true")
 
     args = parser.parse_args()
-    create_inventory(args.root, args.label, case_sensitive=True)
+    create_inventory(args.root, args.label, args.checksum)
